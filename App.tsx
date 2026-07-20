@@ -161,7 +161,7 @@ const App: React.FC = () => {
           return (
             <div 
               key={notification.id} 
-              className="pointer-events-auto w-full border bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex animate-fadeIn transition-[...]
+              className="pointer-events-auto w-full border bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex animate-fadeIn transition-all duration-300"
               id={`notification-banner-${notification.shipmentId}`}
             >
               <div className={`w-2.5 ${stripeColor}`}></div>
