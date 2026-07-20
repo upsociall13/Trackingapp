@@ -1,1 +1,124 @@
-import React, { useState, useEffect } from 'react';\nimport { RotateCw, Copy, Share2, Heart } from 'lucide-react';\n\ninterface Joke {\n  id: number;\n  setup?: string;\n  delivery?: string;\n  joke?: string;\n  type: string;\n  category?: string;\n}\n\nconst JokeGenerator: React.FC = () => {\n  const [joke, setJoke] = useState<Joke | null>(null);\n  const [loading, setLoading] = useState(false);\n  const [error, setError] = useState<string | null>(null);\n  const [favorites, setFavorites] = useState<Joke[]>([]);\n  const [showFavorites, setShowFavorites] = useState(false);\n  const [isDarkMode, setIsDarkMode] = useState(true);\n  const [copiedId, setCopiedId] = useState<number | null>(null);\n  const [category, setCategory] = useState('Any');\n\n  const categories = ['Any', 'General', 'Programming', 'Knock-knock', 'Dark'];\n\n  // Load favorites from localStorage on mount\n  useEffect(() => {\n    const saved = localStorage.getItem('favoriteJokes');\n    if (saved) {\n      try {\n        setFavorites(JSON.parse(saved));\n      } catch (e) {\n        console.error('Error loading favorites:', e);\n      }\n    }\n  }, []);\n\n  // Save favorites to localStorage whenever they change\n  useEffect(() => {\n    localStorage.setItem('favoriteJokes', JSON.stringify(favorites));\n  }, [favorites]);\n\n  const fetchJoke = async () => {\n    setLoading(true);\n    setError(null);\n    try {\n      let url = 'https://v2.jokeapi.dev/joke/';\n\n      if (category === 'Any') {\n        url += 'Any';\n      } else if (category === 'Programming') {\n        url += 'Programming';\n      } else if (category === 'Knock-knock') {\n        url += 'Knock-Knock';\n      } else if (category === 'Dark') {\n        url += 'Dark';\n      } else {\n        url += 'General';\n      }\n\n      url += '?type=single,twopart';\n\n      const response = await fetch(url);\n      if (!response.ok) {\n        throw new Error(`Error: ${response.statusText}`);\n      }\n      const data: Joke = await response.json();\n      setJoke(data);\n    } catch (err) {\n      setError(\n        err instanceof Error\n          ? err.message\n          : 'Failed to fetch joke. Please try again.'\n      );\n      console.error('Error fetching joke:', err);\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  useEffect(() => {\n    fetchJoke();\n  }, [category]);\n\n  const getJokeText = (j: Joke): string => {\n    if (j.setup && j.delivery) {\n      return `${j.setup}\\n\\n${j.delivery}`;\n    }\n    return j.joke || '';\n  };\n\n  const toggleFavorite = (j: Joke) => {\n    const isFavorited = favorites.some((fav) => fav.id === j.id);\n    if (isFavorited) {\n      setFavorites(favorites.filter((fav) => fav.id !== j.id));\n    } else {\n      setFavorites([...favorites, j]);\n    }\n  };\n\n  const isFavorited = joke && favorites.some((fav) => fav.id === joke.id);\n\n  const copyToClipboard = (text: string, id: number) => {\n    navigator.clipboard.writeText(text).then(() => {\n      setCopiedId(id);\n      setTimeout(() => setCopiedId(null), 2000);\n    });\n  };\n\n  const shareJoke = (text: string) => {\n    if (navigator.share) {\n      navigator.share({\n        title: 'Check out this joke!',\n        text: text,\n      }).catch((err) => console.error('Error sharing:', err));\n    } else {\n      copyToClipboard(text, -1);\n    }\n  };\n\n  return (\n    <div\n      className={`min-h-screen transition-colors duration-300 ${\n        isDarkMode\n          ? 'bg-gradient-to-br from-purple-900 via-slate-900 to-slate-900'\n          : 'bg-gradient-to-br from-yellow-50 via-orange-50 to-pink-50'\n      }`}\n    >\n      <div className=\"container mx-auto px-4 py-8 max-w-2xl\">\n        {/* Header */}\n        <div className=\"flex items-center justify-between mb-8\">\n          <h1\n            className={`text-4xl font-bold flex items-center gap-2 ${\n              isDarkMode ? 'text-white' : 'text-gray-900'\n            }`}\n          >\n            😂 Joke Generator\n          </h1>\n          <button\n            onClick={() => setIsDarkMode(!isDarkMode)}\n            className={`px-4 py-2 rounded-lg font-medium transition ${\n              isDarkMode\n                ? 'bg-yellow-500 text-gray-900 hover:bg-yellow-600'\n                : 'bg-purple-600 text-white hover:bg-purple-700'\n            }`}\n          >\n            {isDarkMode ? '☀️' : '🌙'}\n          </button>\n        </div>\n\n        {/* Category Selector */}\n        <div className=\"mb-6\">\n          <label\n            className={`block text-sm font-semibold mb-2 ${\n              isDarkMode ? 'text-gray-300' : 'text-gray-700'\n            }`}\n          >\n            Select Category:\n          </label>\n          <div className=\"flex flex-wrap gap-2\">\n            {categories.map((cat) => (\n              <button\n                key={cat}\n                onClick={() => setCategory(cat)}\n                className={`px-4 py-2 rounded-lg font-medium transition ${\n                  category === cat\n                    ? isDarkMode\n                      ? 'bg-purple-600 text-white'\n                      : 'bg-orange-500 text-white'\n                    : isDarkMode\n                    ? 'bg-slate-700 text-gray-300 hover:bg-slate-600'\n                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'\n                }`}\n              >\n                {cat}\n              </button>\n            ))}\n          </div>\n        </div>\n\n        {/* Main Joke Display */}\n        {!showFavorites ? (\n          <div>\n            {/* Loading State */}\n            {loading && (\n              <div className=\"text-center py-12\">\n                <div className=\"inline-block\">\n                  <div\n                    className={`w-12 h-12 rounded-full border-4 border-t-transparent ${\n                      isDarkMode\n                        ? 'border-purple-500 border-t-gray-700'\n                        : 'border-orange-500 border-t-yellow-100'\n                    }`}\n                    style={{\n                      animation: 'spin 1s linear infinite',\n                    }}\n                  />\n                </div>\n                <p\n                  className={`mt-4 text-lg ${\n                    isDarkMode ? 'text-gray-400' : 'text-gray-600'\n                  }`}\n                >\n                  Loading a hilarious joke...\n                </p>\n              </div>\n            )}\n\n            {/* Error State */}\n            {error && (\n              <div\n                className={`p-6 rounded-2xl text-center ${\n                  isDarkMode\n                    ? 'bg-red-900/30 border border-red-700 text-red-300'\n                    : 'bg-red-100 border border-red-300 text-red-700'\n                }`}\n              >\n                <p className=\"mb-4\">{error}</p>\n                <button\n                  onClick={fetchJoke}\n                  className={`px-4 py-2 rounded-lg font-semibold transition ${\n                    isDarkMode\n                      ? 'bg-red-600 hover:bg-red-700 text-white'\n                      : 'bg-red-500 hover:bg-red-600 text-white'\n                  }`}\n                >\n                  Try Again\n                </button>\n              </div>\n            )}\n\n            {/* Joke Display */}\n            {!loading && !error && joke && (\n              <div\n                className={`rounded-2xl shadow-2xl overflow-hidden mb-6 transition hover:shadow-3xl ${\n                  isDarkMode\n                    ? 'bg-gradient-to-br from-slate-800 to-slate-700 border border-slate-600'\n                    : 'bg-gradient-to-br from-white to-yellow-50 border border-orange-200'\n                }`}\n              >\n                {/* Joke Content */}\n                <div className=\"p-8\">\n                  <div\n                    className={`text-2xl font-semibold mb-6 leading-relaxed ${\n                      isDarkMode ? 'text-white' : 'text-gray-900'\n                    }`}\n                  >\n                    {joke.setup && (\n                      <>\n                        <p className=\"mb-4\">{joke.setup}</p>\n                        <p\n                          className={`text-xl italic ${\n                            isDarkMode ? 'text-purple-300' : 'text-purple-600'\n                          }`}\n                        >\n                          {joke.delivery}\n                        </p>\n                      </>\n                    )}\n                    {joke.joke && <p>{joke.joke}</p>}\n                  </div>\n\n                  {/* Category Badge */}\n                  {joke.category && (\n                    <div className=\"mb-6\">\n                      <span\n                        className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${\n                          isDarkMode\n                            ? 'bg-purple-600 text-white'\n                            : 'bg-orange-200 text-orange-800'\n                        }`}\n                      >\n                        {joke.category}\n                      </span>\n                    </div>\n                  )}\n                </div>\n\n                {/* Action Buttons */}\n                <div className=\"flex gap-3 p-6 border-t border-gray-600 dark:border-slate-600\">\n                  <button\n                    onClick={() => toggleFavorite(joke)}\n                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition flex-1 ${\n                      isFavorited\n                        ? isDarkMode\n                          ? 'bg-red-600 hover:bg-red-700 text-white'\n                          : 'bg-red-500 hover:bg-red-600 text-white'\n                        : isDarkMode\n                        ? 'bg-slate-700 hover:bg-slate-600 text-gray-300'\n                        : 'bg-gray-200 hover:bg-gray-300 text-gray-700'\n                    }`}\n                  >\n                    <Heart size={18} fill={isFavorited ? 'currentColor' : 'none'} />\n                    {isFavorited ? 'Favorited' : 'Favorite'}\n                  </button>\n\n                  <button\n                    onClick={() => copyToClipboard(getJokeText(joke), joke.id)}\n                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition flex-1 ${\n                      isDarkMode\n                        ? 'bg-slate-700 hover:bg-slate-600 text-gray-300'\n                        : 'bg-gray-200 hover:bg-gray-300 text-gray-700'\n                    }`}\n                  >\n                    <Copy size={18} />\n                    {copiedId === joke.id ? 'Copied!' : 'Copy'}\n                  </button>\n\n                  <button\n                    onClick={() => shareJoke(getJokeText(joke))}\n                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition flex-1 ${\n                      isDarkMode\n                        ? 'bg-slate-700 hover:bg-slate-600 text-gray-300'\n                        : 'bg-gray-200 hover:bg-gray-300 text-gray-700'\n                    }`}\n                  >\n                    <Share2 size={18} />\n                    Share\n                  </button>\n                </div>\n              </div>\n            )}\n\n            {/* Get New Joke Button */}\n            {!loading && joke && (\n              <button\n                onClick={fetchJoke}\n                className={`w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold text-lg transition hover:scale-105 active:scale-95 ${\n                  isDarkMode\n                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white'\n                    : 'bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white'\n                }`}\n              >\n                <RotateCw size={20} />\n                Get Another Joke\n              </button>\n            )}\n          </div>\n        ) : null}\n\n        {/* Favorites Toggle */}\n        <div className=\"mt-8\">\n          <button\n            onClick={() => setShowFavorites(!showFavorites)}\n            className={`w-full px-6 py-3 rounded-xl font-bold text-lg transition ${\n              isDarkMode\n                ? `${\n                    showFavorites\n                      ? 'bg-purple-600 hover:bg-purple-700 text-white'\n                      : 'bg-slate-700 hover:bg-slate-600 text-gray-300'\n                  }`\n                : `${\n                    showFavorites\n                      ? 'bg-orange-500 hover:bg-orange-600 text-white'\n                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'\n                  }`\n            }`}\n          >\n            {showFavorites ? '← Back to Generator' : `❤️ My Favorites (${favorites.length})`}\n          </button>\n        </div>\n\n        {/* Favorites List */}\n        {showFavorites && (\n          <div className=\"mt-6 space-y-4\">\n            {favorites.length === 0 ? (\n              <div className=\"text-center py-12\">\n                <p\n                  className={`text-lg ${\n                    isDarkMode ? 'text-gray-400' : 'text-gray-600'\n                  }`}\n                >\n                  No favorite jokes yet. Start adding some!\n                </p>\n              </div>\n            ) : (\n              favorites.map((fav) => (\n                <div\n                  key={fav.id}\n                  className={`rounded-xl shadow-lg overflow-hidden transition ${\n                    isDarkMode\n                      ? 'bg-slate-800 border border-slate-700'\n                      : 'bg-white border border-orange-200'\n                  }}`}\n                >\n                  <div className=\"p-6\">\n                    <p\n                      className={`text-lg font-medium mb-4 ${\n                        isDarkMode ? 'text-white' : 'text-gray-900'\n                      }`}\n                    >\n                      {getJokeText(fav)}\n                    </p>\n                    <div className=\"flex gap-2\">\n                      <button\n                        onClick={() => copyToClipboard(getJokeText(fav), fav.id)}\n                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition ${\n                          isDarkMode\n                            ? 'bg-slate-700 hover:bg-slate-600 text-gray-300'\n                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700'\n                        }`}\n                      >\n                        <Copy size={16} />\n                        Copy\n                      </button>\n                      <button\n                        onClick={() => toggleFavorite(fav)}\n                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition ${\n                          isDarkMode\n                            ? 'bg-red-600 hover:bg-red-700 text-white'\n                            : 'bg-red-500 hover:bg-red-600 text-white'\n                        }`}\n                      >\n                        <Heart size={16} fill=\"currentColor\" />\n                        Remove\n                      </button>\n                    </div>\n                  </div>\n                </div>\n              ))\n            )}\n          </div>\n        )}\n      </div>\n\n      <style>{`\n        @keyframes spin {\n          to { transform: rotate(360deg); }\n        }\n      `}</style>\n    </div>\n  );\n};\n\nexport default JokeGenerator;\n
+import React, { useState, useEffect } from 'react';
+import { RotateCw, Copy, Share2, Heart } from 'lucide-react';
+
+interface Joke {
+  id: number;
+  setup?: string;
+  delivery?: string;
+  joke?: string;
+  type: string;
+}
+
+const JokeGenerator: React.FC = () => {
+  const [joke, setJoke] = useState<Joke | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [liked, setLiked] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const fetchJoke = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('https://official-joke-api.appspot.com/random_joke');
+      const data: Joke = await response.json();
+      setJoke(data);
+      setLiked(false);
+    } catch (error) {
+      console.error('Failed to fetch joke:', error);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchJoke();
+  }, []);
+
+  const copyToClipboard = () => {
+    if (joke) {
+      const text = joke.setup ? `${joke.setup}\n${joke.delivery}` : joke.joke || '';
+      navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const shareJoke = () => {
+    if (joke && navigator.share) {
+      const text = joke.setup ? `${joke.setup}\n${joke.delivery}` : joke.joke || '';
+      navigator.share({
+        title: 'Check out this joke!',
+        text: text,
+      });
+    }
+  };
+
+  return (
+    <div className="bg-gradient-to-br from-purple-600 via-pink-500 to-red-500 rounded-2xl p-8 shadow-2xl">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-3xl font-bold text-white mb-2">Joke of the Day</h2>
+          <p className="text-purple-100">Get a laugh with a random joke</p>
+        </div>
+      </div>
+
+      {joke && (
+        <div className="bg-white bg-opacity-95 rounded-xl p-6 mb-6 min-h-[150px] flex flex-col justify-center">
+          {joke.setup ? (
+            <>
+              <p className="text-lg font-semibold text-gray-800 mb-3">{joke.setup}</p>
+              <p className="text-xl font-bold text-purple-600">{joke.delivery}</p>
+            </>
+          ) : (
+            <p className="text-xl font-semibold text-gray-800">{joke.joke}</p>
+          )}
+        </div>
+      )}
+
+      {loading && (
+        <div className="text-center py-8">
+          <div className="inline-block animate-spin">
+            <RotateCw className="text-white" size={32} />
+          </div>
+          <p className="text-white mt-3">Loading joke...</p>
+        </div>
+      )}
+
+      <div className="flex gap-3 flex-wrap">
+        <button
+          onClick={fetchJoke}
+          disabled={loading}
+          className="flex-1 bg-white hover:bg-opacity-90 text-purple-600 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition disabled:opacity-50"
+        >
+          <RotateCw size={20} />
+          New Joke
+        </button>
+        <button
+          onClick={copyToClipboard}
+          className="flex-1 bg-purple-700 hover:bg-purple-800 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition"
+        >
+          <Copy size={20} />
+          {copied ? 'Copied!' : 'Copy'}
+        </button>
+        <button
+          onClick={shareJoke}
+          className="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition"
+        >
+          <Share2 size={20} />
+          Share
+        </button>
+        <button
+          onClick={() => setLiked(!liked)}
+          className={`flex-1 font-bold py-3 px-4 rounded-lg flex items-center justify-center gap-2 transition ${
+            liked 
+              ? 'bg-red-500 hover:bg-red-600 text-white' 
+              : 'bg-white hover:bg-opacity-90 text-red-500'
+          }`}
+        >
+          <Heart size={20} fill={liked ? 'currentColor' : 'none'} />
+          Like
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default JokeGenerator;
