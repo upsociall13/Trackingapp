@@ -10,7 +10,7 @@ import TrackingDetail from './components/TrackingDetail';
 import LogisticsAssistant from './components/LogisticsAssistant';
 import RuleEngine from './components/RuleEngine';
 import { applyRulesToShipments } from './services/geminiService';
-import { useLanguage } from './src/context/LanguageContext';
+import { useLanguage } from './context/LanguageContext';
 
 const App: React.FC = () => {
   const { t } = useLanguage();
@@ -161,7 +161,7 @@ const App: React.FC = () => {
           return (
             <div 
               key={notification.id} 
-              className="pointer-events-auto w-full border bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex animate-fadeIn transition-all"
+              className="pointer-events-auto w-full border bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex animate-fadeIn transition-[...]
               id={`notification-banner-${notification.shipmentId}`}
             >
               <div className={`w-2.5 ${stripeColor}`}></div>
